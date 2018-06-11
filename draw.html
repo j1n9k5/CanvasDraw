@@ -1,0 +1,292 @@
+<html>
+	<head>
+		<title>canvas画板</title>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" type="text/css" href="draw.css">
+	</head>
+	<body>
+		<div class="box">
+			<div class="top">
+			    <div class="top-box1">
+			    	<input id="pen" type="button" onclick="change(event)" value="画笔" />
+					<input id="eraser" type="button" onclick="change(event)" value="橡皮" />
+					<input id="line" type="button" onclick="change(event)" value="直线" />
+					<input id="fill" type="button" onclick="change(event)" value="填充" />
+					<input id="rect" type="button" onclick="change(event)" value="矩形" />
+					<input id="circle" type="button" onclick="change(event)" value="圆形" />
+					<input id="poly" type="button" onclick="change(event)" value="多边形" />
+					<input id="edge" type="number" min="3" max="6" value="3" />
+			    </div>
+
+			    <div class="top-box2">
+				    <div class="box2">
+				    	样式 <input id="type" attr="1" type="button" value="边框" />
+				    </div>
+					<div class="box2">
+						<span>边框 <input id="colPic1" type="color" /></span>
+						<span>填充 <input id="colPic2" type="color" /></span>
+					</div>
+					<div class="box2">
+						<span>透明 <input type="range" id="alpha" value="1" min="0" max="1" step="0.1" /></span>
+						<span>线宽 <input type="range" id="lineWidth" value="1" min="1" max="6" step="1" /></span>
+					</div>
+				</div>
+
+			    <div class="top-box3">
+					<input id="cancel" type="button" onclick="operate(event)" value="撤销" />
+					<input id="redo" type="button" onclick="operate(event)" value="重做" />
+					<input id="reset" type="button" onclick="operate(event)" value="重置" />
+					<input id="save" type="button" onclick="operate(event)" value="保存" />
+				</div>
+			</div>
+			<div class="bottom">
+				<canvas id="draw" width="800px" height="600px"></canvas>		
+			</div>
+		</div>
+		<div id="hid">tips:当绘制矩形和多边形时，按住q和e可以进行旋转</div>
+		
+		<script type="text/javascript" src="draw.js"></script>
+		<script>
+			//初始化draw类
+			var draw = Draw.init('#draw');
+			var canvas = document.getElementById('draw');
+			//初始化flag监听
+			var flag = false;
+			//默认type为画笔
+			var type = 'pen';
+			//初始为描边
+			var fillType = 1;//1.描边 2.填充 3.描边+填充
+			//橡皮初始尺寸
+			var eraserSize = 1;
+			//多边形初始边数
+			var edges = 3;
+
+			var startX, startY, endX, endY;
+			//必须先调用下get 给画面数组添加一个初始画面
+			draw.get();
+			//鼠标点下时 打开监听flag 记录配置状态
+			canvas.addEventListener('mousedown', function(event)
+			{
+				flag = true;
+				draw.save();
+				startX = event.offsetX;
+				startY = event.offsetY;
+			})
+			canvas.addEventListener('mousemove', function(event)
+			{
+				if(flag == true)
+				{	
+					endX = event.offsetX;
+					endY = event.offsetY;
+					if(type == 'pen')
+					{
+						draw.pen(startX, startY, endX, endY);
+						startX = endX;
+						startY = endY;
+					}
+					else if(type == 'line')
+					{
+						draw.put();
+						draw.pen(startX, startY, endX, endY);
+					}
+					else if(type == 'rect')
+					{
+						draw.put();
+						var width = endX - startX;
+						var height = endY - startY;
+						draw.rect(startX, startY, width, height, fillType);
+					}
+					else if(type == 'circle')
+					{
+						draw.put();
+						draw.circle(startX, startY, endX, endY, fillType);
+					}
+					else if(type == 'poly')
+					{
+						draw.put();
+						draw.poly(startX, startY, endX, endY, edges, fillType);
+					}
+					else if(type == 'eraser')
+					{
+						draw.eraser(endX, endY, eraserSize);
+					}
+					else if(type == 'fill')
+					{
+						draw.filling();
+					}
+				}
+			})
+			//鼠标抬起时 关闭监听flag 读取配置状态 记录画面数组
+			canvas.addEventListener('mouseup', function(event)
+			{
+				flag = false;
+				draw.restore();
+				draw.get();
+			})
+
+			document.addEventListener('keydown',function(event)
+			{
+				var i = 0;
+				//当鼠标处于点下状态才进行按键监听
+				if(flag == true)
+				{
+					//当选择为矩形时 才进行按键监听
+					if(type == 'rect')
+					{	
+						if(event.keyCode == 81)//q
+						{
+							i++;
+							if(i == 359)
+							{
+								i = 0;
+							}
+							draw.put();
+							draw.spin((startX + endX) / 2, (startY + endY) / 2, i * Math.PI / 180);
+							var width = endX - startX;
+							var height = endY - startY;
+							draw.rect(startX, startY, width, height, fillType);
+						}
+						else if(event.keyCode == 69)
+						{
+							i--;
+							if(i == 0)
+							{
+								i = 359;
+							}
+							draw.put();
+							draw.spin((startX + endX) / 2, (startY + endY) / 2, i * Math.PI / 180);
+							var width = endX - startX;
+							var height = endY - startY;
+							draw.rect(startX, startY, width, height, fillType);
+						}		
+					}
+					//当选择为矩形时 才进行按键监听
+					if(type == 'poly')
+					{	
+						if(event.keyCode == 81)//q
+						{
+							i++;
+							if(i == 359)
+							{
+								i = 0;
+							}
+							draw.put();
+							draw.spin(startX, startY, i * Math.PI / 180);
+							draw.poly(startX, startY, endX, endY, edges, fillType);
+						}
+						else if(event.keyCode == 69)
+						{
+							i--;
+							if(i == 0)
+							{
+								i = 359;
+							}
+							draw.put();
+							draw.spin(startX, startY, i * Math.PI / 180);
+							draw.poly(startX, startY, endX, endY, edges, fillType);
+						}		
+					}
+				}
+			});
+
+			function change(event)
+			{
+				type = event.target.id;
+
+				//选中颜色
+				var query = document.querySelectorAll(".top-box1 input[type='button']");
+				var length = query.length;
+				for(var i = 0; i < length; i++){
+				      query[i].style.background = "#aaf";
+				}
+
+				event.target.style.background = '#ffa';
+
+				//显示隐藏tips
+				var hid = document.getElementById('hid');
+				if(type == 'rect' || type == 'poly')
+				{
+					hid.style.display = 'block';
+				}
+				else
+				{
+					hid.style.display = 'none';
+				}
+			}
+
+			function operate(event)
+			{
+				var opr = event.target.id;
+				if(opr == 'cancel')
+				{
+					draw.prev();
+				}
+				else if(opr == 'redo')
+				{
+					draw.after();
+				}
+				else if(opr == 'reset')
+				{
+					draw.reset();
+				}
+				else if(opr == 'save')
+				{
+					var base64 = canvas.toDataURL('image/png'); 
+					window.location.href = base64;
+				}
+			}
+
+			document.getElementById('type').onclick = function(event){
+				var type = event.target.getAttribute('attr');
+				if(type == 1)
+				{
+					event.target.setAttribute('attr', 2);
+					event.target.value = '填充';
+					fillType = 2;
+				}
+				else if(type == 2)
+				{
+					event.target.setAttribute('attr', 3);
+					event.target.value = '边框&填充';
+					fillType = 3;
+				}
+				else
+				{
+					event.target.setAttribute('attr', 1);
+					event.target.value = '边框';
+					fillType = 1;
+				}
+			}
+
+			document.getElementById('colPic1').onchange = function(event)
+			{
+				draw.strokeStyle = event.target.value;
+			}
+
+			document.getElementById('colPic2').onchange = function(event)
+			{
+				draw.fillStyle = event.target.value;
+			}
+
+			document.getElementById('lineWidth').onchange = function(event)
+			{
+				draw.lineWidth = event.target.value;
+			}
+
+			document.getElementById('alpha').onchange = function(event)
+			{
+				draw.globalAlpha = event.target.value;
+			}
+
+			document.getElementById('edge').onchange = function(event)
+			{
+				var value = event.target.value;
+				if(value == '' || value < 3 || value > 6)
+				{
+					event.target.value = 3;
+				}
+				edges = event.target.value;
+			}
+		</script>
+	</body>
+</html>
